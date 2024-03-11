@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Slider Test</title>
+</head>
+<body>
+
+<div id="sliderContainer"></div>
+
+<script type="text/javascript" src="CircularSlider.js"></script>
+
+<script>
+    const slider = new CircularSlider({
+        container: '#sliderContainer',
+        sliders: [
+            {
+                min: 0,
+                max: 100,
+                step: 10,
+                initialValue: 50,
+                name: 'Pink',
+                color: '#fd6eea',
+            },
+            {
+                min: 0,
+                max: 4000,
+                step: 100,
+                initialValue: 200,
+                name: 'Green',
+                color: '#6be309',
+            }
+        ]
+    });
+    slider.draw();
+</script>
+
+</body>
+</html>
