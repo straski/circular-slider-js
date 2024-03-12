@@ -1,0 +1,71 @@
+body {
+    font-family: sans-serif;
+    min-height: 100vh;
+}
+
+.container {
+    width: auto;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 10vh 2rem;
+}
+
+.handle:hover {
+    cursor: pointer;
+}
+
+.legend {
+    padding: 0 2rem 0 0;
+    list-style: none;
+}
+
+.legend > li {
+    display: flex;
+    margin-bottom: 1.4rem;
+}
+
+.legend > li > div {
+    display: inline-block;
+}
+
+.legend > li div:first-child {
+    width: 25px;
+    height: 25px;
+    margin-top: -5px;
+    border-radius: 50%;
+}
+
+.legend > li div:nth-child(2) {
+    margin: 0 1rem;
+    min-width: 50px;
+}
+
+.legend > li div:last-child {
+    min-width: 100px;
+    margin-top: -5px;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+*, *::before, *::after {
+    padding: 0;
+    margin: 0;
+}
+
+.container > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+@media only screen
+and (max-width: 768px) {
+    .legend {
+        padding: 0 0 0 3rem;
+        margin: 0 auto;
+    }
+
+    .sliderWrapper {
+        margin: 0 auto;
+    }
+}

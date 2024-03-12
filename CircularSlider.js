@@ -30,6 +30,7 @@ class CircularSlider {
      * Draw all sliders as configured in options
      */
     draw() {
+        this.drawLegend();
         const wrapper = document.createElement('div');
         wrapper.classList.add('sliderWrapper');
 
@@ -103,6 +104,30 @@ class CircularSlider {
      * Draw legend box
      */
     drawLegend() {
+        const legend = document.createElement('ul');
+        legend.classList.add('legend');
+
+        this.sliders.forEach((slider, index) => {
+            const itemWrapper = document.createElement('li');
+            const itemColor = document.createElement('div');
+            const itemName = document.createElement('div');
+            const itemValue = document.createElement('div');
+
+            itemWrapper.setAttribute('data-index', index);
+
+            itemColor.style.backgroundColor = slider.color;
+            itemName.innerText = slider.name;
+            itemValue.innerText = slider.initialValue;
+            itemValue.classList.add('itemValue');
+
+            itemWrapper.appendChild(itemColor);
+            itemWrapper.appendChild(itemName);
+            itemWrapper.appendChild(itemValue);
+
+            legend.appendChild(itemWrapper);
+        });
+
+        this.container.appendChild(legend);
     }
 
     /**
