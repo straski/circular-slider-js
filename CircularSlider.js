@@ -17,7 +17,8 @@ class CircularSlider {
             initialValue: slider.initialValue || 0,
             name: slider.name || 'N/A',
             color: slider.color || '#7bfff1',
-            y: (index + 1) * 50,
+            y: (index + 1) * 50 - 32,
+            relFactor: slider.max / this.width,
         }));
         this.mouseDown = false;
         this.currentSlider = null;
@@ -77,6 +78,16 @@ class CircularSlider {
         path.style.strokeWidth = this.sliderStrokeWidth;
 
         group.appendChild(path);
+
+        const coloredPath = CircularSlider.createSvgElement('path', {
+            class: 'coloredPath',
+            d: `M0,${slider.y} L${slider.initialValue / slider.relFactor},${slider.y}`
+        });
+
+        coloredPath.style.stroke = slider.color;
+        coloredPath.style.strokeWidth = this.sliderStrokeWidth;
+
+        group.appendChild(coloredPath);
     }
 
     /**
@@ -88,7 +99,7 @@ class CircularSlider {
     drawHandle(slider, group) {
         const handle = CircularSlider.createSvgElement('circle', {
             class: 'handle',
-            cx: slider.initialValue,
+            cx: slider.initialValue / slider.relFactor,
             cy: slider.y,
             r: 15,
             'data-min-value': slider.min,
@@ -135,14 +146,45 @@ class CircularSlider {
 
     /**
      * Update slider on mouse interaction
+     *
+     * @param {{x: number, y: number}} mousePosition The coordinates of the current mouse position
      */
     updateSlider(mousePosition) {
+        if (!this.currentSlider) return;
+
+        const handle = this.currentSlider.querySelector('.handle');
+        const handleY = parseFloat(handle.getAttribute('cy'));
+        const min = parseFloat(handle.getAttribute('data-min-value'));
+        const max = parseFloat(handle.getAttribute('data-max-value'));
+        const step = parseFloat(handle.getAttribute('data-step'));
+
+        let relFactor = max / this.width;
+        let newX = mousePosition.x * relFactor;
+
+        // Min value and step
+        newX = Math.max(min, Math.min(newX, max));
+        newX = Math.round((newX - min) / step) * step + min;
+
+        const coloredPathEnd = newX / relFactor;
+        handle.setAttribute('cx', coloredPathEnd);
+
+        const coloredPath = this.currentSlider.querySelector('.coloredPath');
+        const pathColor = handle.getAttribute('stroke');
+        coloredPath.setAttribute('d', `M0,${handleY} L${coloredPathEnd},${handleY}`);
+        coloredPath.setAttribute('stroke', pathColor);
+
+        this.updateLegend(this.currentSlider.getAttribute('data-index'), newX)
     }
 
     /**
      * Update legend
+     *
+     * @param sliderIndex
+     * @param value
      */
-    updateLegend() {
+    updateLegend(sliderIndex, value) {
+        const legendItem = this.container.querySelector(`.legend li[data-index="${sliderIndex}"] .itemValue`);
+        legendItem.innerText = Math.round(value);
     }
 
     /**

@@ -18,7 +18,7 @@
         container: '#sliderContainer',
         sliders: [
             {
-                min: 0,
+                min: 40,
                 max: 100,
                 step: 10,
                 initialValue: 50,
@@ -32,7 +32,15 @@
                 initialValue: 200,
                 name: 'Green',
                 color: '#6be309',
-            }
+            },
+            {
+                min: 0,
+                max: 200,
+                step: 10,
+                initialValue: 20,
+                name: 'Blue',
+                color: '#3083d6',
+            },
         ]
     });
     slider.draw();
