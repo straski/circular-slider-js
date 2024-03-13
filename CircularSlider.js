@@ -19,6 +19,8 @@ class CircularSlider {
             color: slider.color || '#7bfff1',
             y: (index + 1) * 50,
         }));
+        this.mouseDown = false;
+        this.currentSlider = null;
 
         this.defaultSliderBgColor = '#888888'
         this.handleStrokeColor = '#ffffff';
@@ -42,6 +44,7 @@ class CircularSlider {
         this.container.appendChild(wrapper);
 
         this.sliders.forEach((slider, i) => this.drawSlider(svgElement, slider, i));
+        this.registerMouseEvents(wrapper);
     }
 
     /**
@@ -133,13 +136,108 @@ class CircularSlider {
     /**
      * Update slider on mouse interaction
      */
-    updateSlider() {
+    updateSlider(mousePosition) {
     }
 
     /**
      * Update legend
      */
     updateLegend() {
+    }
+
+    /**
+     * Get the slider nearest to the current mouse position and set it as current
+     *
+     * @param {{x: number, y: number}} mousePosition
+     */
+    setCurrentSlider(mousePosition) {
+        const wrapper = document.querySelector('.sliderWrapper');
+        const groups = Array.from(wrapper.querySelectorAll('g'));
+
+        const handlePositions = groups.map((group) => {
+            const handle = group.querySelector('.handle');
+            const handleY = parseFloat(handle.getAttribute('cy'));
+            return Math.abs(handleY - mousePosition.y);
+        });
+
+        const nearest = handlePositions.indexOf(Math.min(...handlePositions));
+
+        this.currentSlider = groups[nearest];
+    }
+
+    /**
+     * Register mouse events
+     *
+     * @param DOMInteractionContainer
+     */
+    registerMouseEvents(DOMInteractionContainer) {
+        DOMInteractionContainer.addEventListener('mousedown', this.handleMouseStart.bind(this), false);
+        DOMInteractionContainer.addEventListener('touchstart', this.handleMouseStart.bind(this), false);
+        DOMInteractionContainer.addEventListener('mousemove', this.handleMouseMove.bind(this), false);
+        DOMInteractionContainer.addEventListener('touchmove', this.handleMouseMove.bind(this), false);
+        window.addEventListener('mouseup', this.handleMouseEnd.bind(this), false);
+        window.addEventListener('touchend', this.handleMouseEnd.bind(this), false);
+    }
+
+    /**
+     * Handle mouse event
+     *
+     * @param event
+     */
+    handleMouseStart(event) {
+        if (this.mouseDown) return;
+
+        this.mouseDown = true;
+        const mousePosition = CircularSlider.getMousePosition(event);
+        this.setCurrentSlider(mousePosition);
+        this.updateSlider(mousePosition);
+    }
+
+    /**
+     * Handle mouse event
+     *
+     * @param event
+     */
+    handleMouseMove(event) {
+        if (!this.mouseDown || !this.currentSlider) return;
+
+        event.preventDefault();
+        const mousePosition = CircularSlider.getMousePosition(event);
+        this.updateSlider(mousePosition);
+    }
+
+    /**
+     * Handle mouse event
+     */
+    handleMouseEnd() {
+        if (!this.mouseDown) return;
+
+        this.mouseDown = false;
+        this.currentSlider = null;
+    }
+
+    /**
+     * Get mouse position relative to the SVG wrapper
+     *
+     * @param event
+     * @returns {{x: number, y: number}}
+     */
+    static getMousePosition(event) {
+        const wrapper = document.querySelector('.sliderWrapper').getBoundingClientRect();
+        let x, y, mouseX, mouseY;
+
+        if (window.TouchEvent && event instanceof TouchEvent) {
+            mouseX = event.touches[0].pageX;
+            mouseY = event.touches[0].pageY;
+        } else {
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+        }
+
+        x = mouseX - wrapper.left;
+        y = mouseY - wrapper.top;
+
+        return {x, y};
     }
 
     /**
