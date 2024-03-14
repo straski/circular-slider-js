@@ -14,11 +14,11 @@ class CircularSlider {
             min: slider.min || 0,
             max: slider.max || 100,
             step: slider.step || 1,
-            initialValue: slider.initialValue || 0,
             name: slider.name || 'N/A',
             color: slider.color || '#7bfff1',
-            y: (index + 1) * 50 - 32,
-            relFactor: slider.max / this.width,
+            radius: slider.radius || 40,
+            initialValue: slider.initialValue || 0,
+            initialAngle: Math.floor((slider.initialValue / (slider.max - slider.min)) * 360),
         }));
         this.mouseDown = false;
         this.currentSlider = null;
@@ -26,7 +26,10 @@ class CircularSlider {
         this.defaultSliderBgColor = '#888888'
         this.handleStrokeColor = '#ffffff';
         this.handleStrokeWidth = 5;
-        this.sliderStrokeWidth = 15;
+        this.sliderStrokeWidth = 20;
+
+        this.cx = this.width / 2;
+        this.cy = this.height / 2;
     }
 
     /**
@@ -56,10 +59,16 @@ class CircularSlider {
      * @param {number} index
      */
     drawSlider(svgElement, slider, index) {
-        const group = CircularSlider.createSvgElement('g', {'data-index': index});
+        const group = CircularSlider.createSvgElement('g', {
+            'data-index': index,
+            'class': 'path',
+            'transform': 'rotate(-90,' + this.cx + ',' + this.cy + ')',
+            'rad': slider.radius
+        });
         svgElement.appendChild(group);
 
-        this.drawPath(slider, group);
+        this.drawPath(slider, group, 0);
+        this.drawPath(slider, group, 1);
         this.drawHandle(slider, group);
     }
 
@@ -68,39 +77,37 @@ class CircularSlider {
      *
      * @param {object} slider
      * @param group
+     * @param {number} part
      */
-    drawPath(slider, group) {
+    drawPath(slider, group, part) {
+        const pathClass = (part === 0) ? 'path' : 'coloredPath';
+        const pathColor = (part === 0) ? this.defaultSliderBgColor : slider.color;
+        const angle = (part === 0) ? 360 : slider.initialAngle;
+
         const path = CircularSlider.createSvgElement('path', {
             d: `M0,${slider.y} L${this.width},${slider.y}`
         });
 
-        path.style.stroke = this.defaultSliderBgColor;
+        path.style.stroke = pathColor;
         path.style.strokeWidth = this.sliderStrokeWidth;
+        path.style.fill = 'none';
 
         group.appendChild(path);
-
-        const coloredPath = CircularSlider.createSvgElement('path', {
-            class: 'coloredPath',
-            d: `M0,${slider.y} L${slider.initialValue / slider.relFactor},${slider.y}`
-        });
-
-        coloredPath.style.stroke = slider.color;
-        coloredPath.style.strokeWidth = this.sliderStrokeWidth;
-
-        group.appendChild(coloredPath);
     }
 
     /**
      * Draw handle
      *
-     * @param {object} slider The slider to draw handle for
+     * @param slider The slider to draw handle for
      * @param group  The slider group
      */
     drawHandle(slider, group) {
+        const center = {x: 0, y: 0};
+
         const handle = CircularSlider.createSvgElement('circle', {
             class: 'handle',
-            cx: slider.initialValue / slider.relFactor,
-            cy: slider.y,
+            cx: center.x,
+            cy: center.y,
             r: 15,
             'data-min-value': slider.min,
             'data-max-value': slider.max,
