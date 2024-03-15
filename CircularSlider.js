@@ -3,12 +3,12 @@ class CircularSlider {
      * @param {string} container The container element's CSS selector
      * @param {array} sliders The list of sliders to draw
      */
-    constructor({container, sliders}) {
+    constructor({ container, sliders }) {
         this.containerSelector = container;
         this.container = document.querySelector(this.containerSelector);
         this.width = 500;
         this.height = 500;
-        this.sliders = sliders.map((slider, index) => ({
+        this.sliders = sliders.map((slider) => ({
             ...slider,
             min: slider.min || 0,
             max: slider.max || 100,
@@ -23,7 +23,7 @@ class CircularSlider {
         this.mouseDown = false;
         this.currentSlider = null;
 
-        this.defaultSliderBgColor = '#888888'
+        this.defaultSliderBgColor = '#888888';
         this.handleStrokeColor = '#ffffff';
         this.handleStrokeWidth = 5;
 
@@ -66,9 +66,9 @@ class CircularSlider {
         const segmentSpacing = this.getSegmentSpacing(circumference);
         const group = CircularSlider.createSvgElement('g', {
             'data-index': index,
-            'class': 'path',
-            'transform': 'rotate(-90,' + this.cx + ',' + this.cy + ')',
-            'rad': slider.radius
+            class: 'path',
+            transform: `rotate(-90,${this.cx},${this.cy})`,
+            rad: slider.radius,
         });
         svgElement.appendChild(group);
 
@@ -92,12 +92,12 @@ class CircularSlider {
 
         const path = CircularSlider.createSvgElement('path', {
             class: pathClass,
-            d: this.describeArc(0, angle, slider.radius)
+            d: this.describeArc(0, angle, slider.radius),
         });
 
         path.style.stroke = pathColor;
         path.style.strokeWidth = this.pathSegmentWidth;
-        path.setAttribute('stroke-dasharray', this.pathSegmentLength + ' ' + spacing);
+        path.setAttribute('stroke-dasharray', `${this.pathSegmentLength} ${spacing}`);
         path.style.fill = 'none';
 
         group.appendChild(path);
@@ -112,7 +112,7 @@ class CircularSlider {
     drawHandle(slider, group) {
         const center = this.getHandleCenter(
             slider.initialAngle * (2 * Math.PI) / 360,
-            slider.radius
+            slider.radius,
         );
 
         const handle = CircularSlider.createSvgElement('circle', {
@@ -180,11 +180,10 @@ class CircularSlider {
 
         const path = this.currentSlider.querySelector('.coloredPath');
         const pathColor = handle.getAttribute('stroke');
-        path.setAttribute('d', this.describeArc(0, CircularSlider.radiansToDegrees(angle), radius)
-        );
+        path.setAttribute('d', this.describeArc(0, CircularSlider.radiansToDegrees(angle), radius));
         path.setAttribute('stroke', pathColor);
 
-        this.updateLegend(angle)
+        this.updateLegend(angle);
     }
 
     /**
@@ -213,7 +212,7 @@ class CircularSlider {
         const groups = Array.from(wrapper.querySelectorAll('g'));
         const distance = Math.hypot(
             mousePosition.x - this.cx,
-            mousePosition.y - this.cy
+            mousePosition.y - this.cy,
         );
         const handlePositions = groups.map((slider) => {
             const rad = parseInt(slider.getAttribute('rad'));
@@ -286,7 +285,7 @@ class CircularSlider {
     getHandleCenter(angle, radius) {
         const x = this.cx + Math.cos(angle) * radius;
         const y = this.cy + Math.sin(angle) * radius;
-        return {x, y};
+        return { x, y };
     }
 
     /**
@@ -298,12 +297,12 @@ class CircularSlider {
     getMouseAngle(mouseCoordinates) {
         const angle = Math.atan2(
             mouseCoordinates.y - this.cy,
-            mouseCoordinates.x - this.cx
+            mouseCoordinates.x - this.cx,
         );
 
-        return (angle > -(2 * Math.PI) / 2 && angle < -(2 * Math.PI) / 4) ?
-            angle + (2 * Math.PI) * 1.25 :
-            angle + (2 * Math.PI) * 0.25;
+        return (angle > -(2 * Math.PI) / 2 && angle < -(2 * Math.PI) / 4)
+            ? angle + (2 * Math.PI) * 1.25
+            : angle + (2 * Math.PI) * 0.25;
     }
 
     /**
@@ -316,16 +315,16 @@ class CircularSlider {
      * @returns {string}
      */
     describeArc(startAngle, endAngle, radius) {
-        let _endAngle = endAngle;
+        const _endAngle = endAngle;
 
         endAngle = (_endAngle - startAngle === 360) ? 359 : endAngle;
 
         const start = this.polarToCartesian(endAngle, radius);
         const end = this.polarToCartesian(startAngle, radius);
-        const sweep = endAngle - startAngle <= 180 ? "0" : "1";
-        let d = `M${start.x},${start.y}A${radius},${radius},0,${sweep},0,${end.x},${end.y}`;
+        const sweep = endAngle - startAngle <= 180 ? '0' : '1';
+        const d = `M${start.x},${start.y}A${radius},${radius},0,${sweep},0,${end.x},${end.y}`;
 
-        return (_endAngle - startAngle === 360) ? d + 'z' : d;
+        return (_endAngle - startAngle === 360) ? `${d}z` : d;
     }
 
     /**
@@ -338,7 +337,7 @@ class CircularSlider {
         const angleInRadians = angle * Math.PI / 180;
         const x = this.cx + (radius * Math.cos(angleInRadians));
         const y = this.cy + (radius * Math.sin(angleInRadians));
-        return {x, y};
+        return { x, y };
     }
 
     /**
@@ -361,7 +360,8 @@ class CircularSlider {
      */
     static getMousePosition(event) {
         const wrapper = document.querySelector('.sliderWrapper').getBoundingClientRect();
-        let x, y, mouseX, mouseY;
+        let x; let y; let mouseX; let
+            mouseY;
 
         if (window.TouchEvent && event instanceof TouchEvent) {
             mouseX = event.touches[0].pageX;
@@ -374,7 +374,7 @@ class CircularSlider {
         x = mouseX - wrapper.left;
         y = mouseY - wrapper.top;
 
-        return {x, y};
+        return { x, y };
     }
 
     /**
