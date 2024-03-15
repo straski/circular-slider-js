@@ -1,7 +1,7 @@
 class CircularSlider {
     /**
      * @param {string} container The container element's CSS selector
-     * @param {object} sliders The list of sliders to draw
+     * @param {array} sliders The list of sliders to draw
      */
     constructor({container, sliders}) {
         this.containerSelector = container;
@@ -19,16 +19,20 @@ class CircularSlider {
             initialValue: slider.initialValue || 0,
             initialAngle: Math.floor((slider.initialValue / (slider.max - slider.min)) * 360),
         }));
+
         this.mouseDown = false;
         this.currentSlider = null;
 
         this.defaultSliderBgColor = '#888888'
         this.handleStrokeColor = '#ffffff';
         this.handleStrokeWidth = 5;
-        this.sliderStrokeWidth = 20;
 
         this.cx = this.width / 2;
         this.cy = this.height / 2;
+
+        this.pathSegmentSpacing = 0.9;
+        this.pathSegmentLength = 10;
+        this.pathSegmentWidth = 25;
     }
 
     /**
@@ -58,6 +62,8 @@ class CircularSlider {
      * @param {number} index
      */
     drawSlider(svgElement, slider, index) {
+        const circumference = slider.radius * 2 * Math.PI;
+        const segmentSpacing = this.getSegmentSpacing(circumference);
         const group = CircularSlider.createSvgElement('g', {
             'data-index': index,
             'class': 'path',
@@ -66,30 +72,32 @@ class CircularSlider {
         });
         svgElement.appendChild(group);
 
-        this.drawPath(slider, group, 0);
-        this.drawPath(slider, group, 1);
+        this.drawPath(slider, group, 0, segmentSpacing);
+        this.drawPath(slider, group, 1, segmentSpacing);
         this.drawHandle(slider, group);
     }
 
     /**
-     * Draw paths for slider
+     * Draw path for slider
      *
      * @param {object} slider
      * @param group
      * @param {number} part
+     * @param {number} spacing
      */
-    drawPath(slider, group, part) {
+    drawPath(slider, group, part, spacing) {
         const pathClass = (part === 0) ? 'path' : 'coloredPath';
         const pathColor = (part === 0) ? this.defaultSliderBgColor : slider.color;
         const angle = (part === 0) ? 360 : slider.initialAngle;
 
         const path = CircularSlider.createSvgElement('path', {
             class: pathClass,
-            d: CircularSlider.describeArc(this.cx, this.cy, 0, angle, slider.radius)
+            d: this.describeArc(0, angle, slider.radius)
         });
 
         path.style.stroke = pathColor;
-        path.style.strokeWidth = this.sliderStrokeWidth;
+        path.style.strokeWidth = this.pathSegmentWidth;
+        path.setAttribute('stroke-dasharray', this.pathSegmentLength + ' ' + spacing);
         path.style.fill = 'none';
 
         group.appendChild(path);
@@ -111,7 +119,7 @@ class CircularSlider {
             class: 'handle',
             cx: center.x,
             cy: center.y,
-            r: 15,
+            r: 20,
             'data-min-value': slider.min,
             'data-max-value': slider.max,
             'data-step': slider.step,
@@ -172,8 +180,7 @@ class CircularSlider {
 
         const path = this.currentSlider.querySelector('.coloredPath');
         const pathColor = handle.getAttribute('stroke');
-        path.setAttribute('d', CircularSlider.describeArc(
-            this.cx, this.cy, 0, CircularSlider.radiansToDegrees(angle), radius)
+        path.setAttribute('d', this.describeArc(0, CircularSlider.radiansToDegrees(angle), radius)
         );
         path.setAttribute('stroke', pathColor);
 
@@ -300,6 +307,53 @@ class CircularSlider {
     }
 
     /**
+     * Describe the arc definition (d)
+     *
+     * @see https://stackoverflow.com/a/62080606
+     * @param {number} radius
+     * @param {number} startAngle
+     * @param {number} endAngle
+     * @returns {string}
+     */
+    describeArc(startAngle, endAngle, radius) {
+        let _endAngle = endAngle;
+
+        endAngle = (_endAngle - startAngle === 360) ? 359 : endAngle;
+
+        const start = this.polarToCartesian(endAngle, radius);
+        const end = this.polarToCartesian(startAngle, radius);
+        const sweep = endAngle - startAngle <= 180 ? "0" : "1";
+        let d = `M${start.x},${start.y}A${radius},${radius},0,${sweep},0,${end.x},${end.y}`;
+
+        return (_endAngle - startAngle === 360) ? d + 'z' : d;
+    }
+
+    /**
+     * @see https://stackoverflow.com/a/62080606
+     * @param {number} radius
+     * @param {number} angle Angle in deg
+     * @returns {{x: *, y: *}}
+     */
+    polarToCartesian(angle, radius) {
+        const angleInRadians = angle * Math.PI / 180;
+        const x = this.cx + (radius * Math.cos(angleInRadians));
+        const y = this.cy + (radius * Math.sin(angleInRadians));
+        return {x, y};
+    }
+
+    /**
+     * Get space between path segments
+     *
+     * @param {number} circumference
+     *
+     * @returns {number}
+     */
+    getSegmentSpacing(circumference) {
+        const segments = Math.floor((circumference / this.pathSegmentLength) * this.pathSegmentSpacing);
+        return (circumference - segments * this.pathSegmentLength) / segments;
+    }
+
+    /**
      * Get mouse position relative to the SVG wrapper
      *
      * @param event
@@ -338,45 +392,6 @@ class CircularSlider {
         }
 
         return el;
-    }
-
-    /**
-     * Describe the arc definition (d)
-     *
-     * @see https://stackoverflow.com/a/62080606
-     * @param {number} x
-     * @param {number} y
-     * @param {number} radius
-     * @param {number} startAngle
-     * @param {number} endAngle
-     * @returns {string}
-     */
-    static describeArc(x, y, startAngle, endAngle, radius) {
-        let _endAngle = endAngle;
-
-        endAngle = (_endAngle - startAngle === 360) ? 359 : endAngle;
-
-        const start = CircularSlider.polarToCartesian(x, y, endAngle, radius);
-        const end = CircularSlider.polarToCartesian(x, y, startAngle, radius);
-        const sweep = endAngle - startAngle <= 180 ? "0" : "1";
-        let d = `M${start.x},${start.y}A${radius},${radius},0,${sweep},0,${end.x},${end.y}`;
-
-        return (_endAngle - startAngle === 360) ? d + 'z' : d;
-    }
-
-    /**
-     * @see https://stackoverflow.com/a/62080606
-     * @param {number} cx
-     * @param {number} cy
-     * @param {number} radius
-     * @param {number} angle Angle in deg
-     * @returns {{x: *, y: *}}
-     */
-    static polarToCartesian(cx, cy, angle, radius) {
-        const angleInRadians = angle * Math.PI / 180;
-        const x = cx + (radius * Math.cos(angleInRadians));
-        const y = cy + (radius * Math.sin(angleInRadians));
-        return {x, y};
     }
 
     /**
