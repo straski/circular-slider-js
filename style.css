@@ -55,6 +55,7 @@ body {
 .container > div {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 @media only screen

@@ -1,6 +1,5 @@
 class CircularSlider {
     /**
-     *
      * @param {string} container The container element's CSS selector
      * @param {object} sliders The list of sliders to draw
      */
@@ -85,7 +84,8 @@ class CircularSlider {
         const angle = (part === 0) ? 360 : slider.initialAngle;
 
         const path = CircularSlider.createSvgElement('path', {
-            d: `M0,${slider.y} L${this.width},${slider.y}`
+            class: pathClass,
+            d: CircularSlider.describeArc(this.cx, this.cy, 0, angle, slider.radius)
         });
 
         path.style.stroke = pathColor;
@@ -102,7 +102,10 @@ class CircularSlider {
      * @param group  The slider group
      */
     drawHandle(slider, group) {
-        const center = {x: 0, y: 0};
+        const center = this.getHandleCenter(
+            slider.initialAngle * (2 * Math.PI) / 360,
+            slider.radius
+        );
 
         const handle = CircularSlider.createSvgElement('circle', {
             class: 'handle',
@@ -159,39 +162,38 @@ class CircularSlider {
     updateSlider(mousePosition) {
         if (!this.currentSlider) return;
 
+        const radius = +this.currentSlider.getAttribute('rad');
+        const angle = this.getMouseAngle(mousePosition) * 0.99;
         const handle = this.currentSlider.querySelector('.handle');
-        const handleY = parseFloat(handle.getAttribute('cy'));
-        const min = parseFloat(handle.getAttribute('data-min-value'));
-        const max = parseFloat(handle.getAttribute('data-max-value'));
-        const step = parseFloat(handle.getAttribute('data-step'));
 
-        let relFactor = max / this.width;
-        let newX = mousePosition.x * relFactor;
+        const handleCenter = this.getHandleCenter(angle, radius);
+        handle.setAttribute('cx', handleCenter.x);
+        handle.setAttribute('cy', handleCenter.y);
 
-        // Min value and step
-        newX = Math.max(min, Math.min(newX, max));
-        newX = Math.round((newX - min) / step) * step + min;
-
-        const coloredPathEnd = newX / relFactor;
-        handle.setAttribute('cx', coloredPathEnd);
-
-        const coloredPath = this.currentSlider.querySelector('.coloredPath');
+        const path = this.currentSlider.querySelector('.coloredPath');
         const pathColor = handle.getAttribute('stroke');
-        coloredPath.setAttribute('d', `M0,${handleY} L${coloredPathEnd},${handleY}`);
-        coloredPath.setAttribute('stroke', pathColor);
+        path.setAttribute('d', CircularSlider.describeArc(
+            this.cx, this.cy, 0, CircularSlider.radiansToDegrees(angle), radius)
+        );
+        path.setAttribute('stroke', pathColor);
 
-        this.updateLegend(this.currentSlider.getAttribute('data-index'), newX)
+        this.updateLegend(angle)
     }
 
     /**
      * Update legend
      *
-     * @param sliderIndex
-     * @param value
+     * @param {number} angle
      */
-    updateLegend(sliderIndex, value) {
-        const legendItem = this.container.querySelector(`.legend li[data-index="${sliderIndex}"] .itemValue`);
-        legendItem.innerText = Math.round(value);
+    updateLegend(angle) {
+        const sliderIndex = this.currentSlider.getAttribute('data-index');
+        const legend = document.querySelector(`li[data-index="${sliderIndex}"] .itemValue`);
+        const slider = this.sliders[sliderIndex];
+        const range = slider.max - slider.min;
+        let value = angle / (2 * Math.PI) * range;
+        const steps = Math.round(value / slider.step);
+        value = slider.min + steps * slider.step;
+        legend.innerText = value;
     }
 
     /**
@@ -202,11 +204,13 @@ class CircularSlider {
     setCurrentSlider(mousePosition) {
         const wrapper = document.querySelector('.sliderWrapper');
         const groups = Array.from(wrapper.querySelectorAll('g'));
-
-        const handlePositions = groups.map((group) => {
-            const handle = group.querySelector('.handle');
-            const handleY = parseFloat(handle.getAttribute('cy'));
-            return Math.abs(handleY - mousePosition.y);
+        const distance = Math.hypot(
+            mousePosition.x - this.cx,
+            mousePosition.y - this.cy
+        );
+        const handlePositions = groups.map((slider) => {
+            const rad = parseInt(slider.getAttribute('rad'));
+            return Math.min(Math.abs(distance - rad));
         });
 
         const nearest = handlePositions.indexOf(Math.min(...handlePositions));
@@ -266,6 +270,36 @@ class CircularSlider {
     }
 
     /**
+     * Get center point of handle element
+     *
+     * @param {number} angle
+     * @param {number} radius
+     * @returns {{x: *, y: *}}
+     */
+    getHandleCenter(angle, radius) {
+        const x = this.cx + Math.cos(angle) * radius;
+        const y = this.cy + Math.sin(angle) * radius;
+        return {x, y};
+    }
+
+    /**
+     * Get mouse angle
+     *
+     * @param {{x: number, y: number}} mouseCoordinates
+     * @returns {number}
+     */
+    getMouseAngle(mouseCoordinates) {
+        const angle = Math.atan2(
+            mouseCoordinates.y - this.cy,
+            mouseCoordinates.x - this.cx
+        );
+
+        return (angle > -(2 * Math.PI) / 2 && angle < -(2 * Math.PI) / 4) ?
+            angle + (2 * Math.PI) * 1.25 :
+            angle + (2 * Math.PI) * 0.25;
+    }
+
+    /**
      * Get mouse position relative to the SVG wrapper
      *
      * @param event
@@ -304,5 +338,52 @@ class CircularSlider {
         }
 
         return el;
+    }
+
+    /**
+     * Describe the arc definition (d)
+     *
+     * @see https://stackoverflow.com/a/62080606
+     * @param {number} x
+     * @param {number} y
+     * @param {number} radius
+     * @param {number} startAngle
+     * @param {number} endAngle
+     * @returns {string}
+     */
+    static describeArc(x, y, startAngle, endAngle, radius) {
+        let _endAngle = endAngle;
+
+        endAngle = (_endAngle - startAngle === 360) ? 359 : endAngle;
+
+        const start = CircularSlider.polarToCartesian(x, y, endAngle, radius);
+        const end = CircularSlider.polarToCartesian(x, y, startAngle, radius);
+        const sweep = endAngle - startAngle <= 180 ? "0" : "1";
+        let d = `M${start.x},${start.y}A${radius},${radius},0,${sweep},0,${end.x},${end.y}`;
+
+        return (_endAngle - startAngle === 360) ? d + 'z' : d;
+    }
+
+    /**
+     * @see https://stackoverflow.com/a/62080606
+     * @param {number} cx
+     * @param {number} cy
+     * @param {number} radius
+     * @param {number} angle Angle in deg
+     * @returns {{x: *, y: *}}
+     */
+    static polarToCartesian(cx, cy, angle, radius) {
+        const angleInRadians = angle * Math.PI / 180;
+        const x = cx + (radius * Math.cos(angleInRadians));
+        const y = cy + (radius * Math.sin(angleInRadians));
+        return {x, y};
+    }
+
+    /**
+     * @param {number} angle
+     * @returns {number}
+     */
+    static radiansToDegrees(angle) {
+        return angle / (Math.PI / 180);
     }
 }
